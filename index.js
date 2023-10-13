@@ -15,7 +15,7 @@ app.use(express.json());
 app.use(cors());
 app.use(logger);
 // eslint-disable-next-line no-undef
-app.use(express.static(__dirname));
+app.use(express.static(process.cwd() + "/client/index.html"));
 
 const server = http.createServer(app);
 const io = new Server(server, {
