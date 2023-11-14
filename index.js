@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const { Worker, isMainThread } = require("worker_threads");
 
 const cors = require("cors");
 const logger = require("./middleware/loggerMiddleware");
@@ -42,10 +43,28 @@ const generateAndSendBall = () => {
     return;
   }
   isGeneratingBall = true;
-  const ball = generateRandomBall(generatedBalls);
-  generatedBalls.push(ball);
-  io.emit("newBall", ball);
-  isGeneratingBall = false;
+  const worker = new Worker("./logic/gameLogic", {
+    workerData: {
+      generatedBalls,
+    },
+  });
+  worker.on("message", (ball) => {
+    generatedBalls.push(ball);
+    io.emit("newBall", ball);
+    isGeneratingBall = false;
+  });
+
+  worker.on("error", (err) => {
+    console.error(err);
+    isGeneratingBall = false;
+  });
+
+  worker.on("exit", (code) => {
+    if (code !== 0) {
+      console.error(`Worker stopped with exit code ${code}`);
+    }
+    isGeneratingBall = false;
+  });
 };
 
 const resetGame = () => {
